@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - TaskFlow</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="logo">TaskFlow</a>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+      <a href="/register">Sign Up</a>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width: 440px; margin-top: 60px;">
+    <div class="card">
+      <h2 style="text-align: center; margin-bottom: 24px;">Welcome Back</h2>
+
+      <form id="login-form">
+        <div class="form-group">
+          <!-- BUG: Label says "Email" but input type is "text" not "email" -->
+          <label for="email">Email Address</label>
+          <input type="text" id="email" name="email" placeholder="you@example.com">
+          <div class="error">Please enter a valid email address</div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <!-- BUG: No minlength attribute, no password requirements shown -->
+          <input type="password" id="password" name="password" placeholder="Enter your password">
+          <div class="error">Password is required</div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+            <!-- BUG: Checkbox has no id/name — can't be submitted -->
+            <input type="checkbox"> Remember me
+          </label>
+          <!-- BUG: Forgot password link goes to a page that doesn't exist -->
+          <a href="/forgot-password" style="font-size: 13px; color: #667eea;">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn" id="login-btn">Log In</button>
+
+        <!-- BUG: Error message div exists but has poor positioning -->
+        <div id="login-error" style="display:none; color: #ef4444; font-size: 13px; text-align: center; margin-top: 12px;"></div>
+        <div id="login-success" style="display:none; color: #22c55e; font-size: 13px; text-align: center; margin-top: 12px;"></div>
+      </form>
+
+      <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+        <p style="font-size: 13px; color: #6b7280;">
+          Don't have an account? <a href="/register" style="color: #667eea; font-weight: 600;">Sign up</a>
+        </p>
+      </div>
+
+      <!-- BUG: Social login buttons don't work -->
+      <div style="margin-top: 20px;">
+        <button class="btn btn-secondary" style="margin-bottom: 8px;" onclick="alert('Google login not implemented')">
+          Continue with Google
+        </button>
+        <button class="btn" style="background: #1877f2;" onclick="alert('Facebook login not implemented')">
+          Continue with Facebook
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      // BUG: Client-side validation is minimal
+      if (!email) {
+        document.getElementById('email').parentElement.classList.add('has-error');
+        return;
+      }
+
+      // BUG: No loading state on button
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          // BUG: Stores token in localStorage (XSS-vulnerable)
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          document.getElementById('login-success').textContent = 'Login successful! Redirecting...';
+          document.getElementById('login-success').style.display = 'block';
+          document.getElementById('login-error').style.display = 'none';
+          // BUG: 3-second delay before redirect (bad UX)
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 3000);
+        } else {
+          // BUG: Shows raw server error message (leaks info about whether email exists)
+          document.getElementById('login-error').textContent = data.error;
+          document.getElementById('login-error').style.display = 'block';
+          document.getElementById('login-success').style.display = 'none';
+        }
+      } catch (err) {
+        // BUG: Generic error message, no retry option
+        document.getElementById('login-error').textContent = 'Something went wrong. Please try again.';
+        document.getElementById('login-error').style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

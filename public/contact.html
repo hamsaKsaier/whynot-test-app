@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact - TaskFlow</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="logo">TaskFlow</a>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+      <a href="/login">Login</a>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width: 600px;">
+    <div class="card">
+      <h1 style="font-size: 28px; margin-bottom: 8px;">Contact Us</h1>
+      <p style="color: #6b7280; margin-bottom: 24px;">Have a question? We'd love to hear from you.</p>
+
+      <form id="contact-form">
+        <div class="form-group">
+          <label for="contact-name">Your Name</label>
+          <input type="text" id="contact-name" placeholder="John Doe">
+          <div class="error">Name is required</div>
+        </div>
+
+        <div class="form-group">
+          <label for="contact-email">Email Address</label>
+          <!-- BUG: type="text" instead of "email" -->
+          <input type="text" id="contact-email" placeholder="you@example.com">
+          <div class="error">Valid email is required</div>
+        </div>
+
+        <div class="form-group">
+          <label for="contact-subject">Subject</label>
+          <select id="contact-subject">
+            <!-- BUG: No default "Select a subject" placeholder option -->
+            <option value="general">General Inquiry</option>
+            <option value="support">Technical Support</option>
+            <option value="billing">Billing</option>
+            <option value="feedback">Feedback</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="contact-message">Message</label>
+          <!-- BUG: No minlength or required on textarea -->
+          <textarea id="contact-message" rows="5" placeholder="How can we help?"></textarea>
+          <div class="error">Message is required</div>
+        </div>
+
+        <button type="submit" class="btn" id="contact-submit-btn">Send Message</button>
+
+        <div id="contact-success" style="display:none; color: #22c55e; font-size: 14px; text-align: center; margin-top: 16px; padding: 12px; background: #f0fdf4; border-radius: 8px;">
+          Message sent! We'll get back to you within 24 hours.
+        </div>
+        <div id="contact-error" style="display:none; color: #ef4444; font-size: 14px; text-align: center; margin-top: 16px;"></div>
+      </form>
+    </div>
+
+    <!-- Contact info sidebar -->
+    <div class="card">
+      <h2>Other Ways to Reach Us</h2>
+      <div style="margin-top: 12px; font-size: 14px; color: #4b5563;">
+        <p style="margin-bottom: 12px;">
+          <!-- BUG: Email link is malformed -->
+          <strong>Email:</strong> <a href="mailto:support@taskflow" style="color: #667eea;">support@taskflow.com</a>
+        </p>
+        <p style="margin-bottom: 12px;">
+          <!-- BUG: Phone number format is inconsistent -->
+          <strong>Phone:</strong> +1-555-TASKFLOW
+        </p>
+        <p>
+          <strong>Address:</strong> 123 Tech Street, San Francisco, CA 94102
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>&copy; 2023 TaskFlow. All rights reserved.</p>
+  </footer>
+
+  <script>
+    document.getElementById('contact-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      let hasError = false;
+
+      const name = document.getElementById('contact-name').value.trim();
+      const email = document.getElementById('contact-email').value.trim();
+      const message = document.getElementById('contact-message').value.trim();
+
+      document.querySelectorAll('.form-group').forEach(g => g.classList.remove('has-error'));
+
+      if (!name) {
+        document.getElementById('contact-name').parentElement.classList.add('has-error');
+        hasError = true;
+      }
+      // BUG: Weak email validation
+      if (!email || !email.includes('@')) {
+        document.getElementById('contact-email').parentElement.classList.add('has-error');
+        hasError = true;
+      }
+      if (!message) {
+        document.getElementById('contact-message').parentElement.classList.add('has-error');
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      // BUG: No loading state
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name, email,
+            subject: document.getElementById('contact-subject').value,
+            message
+          }),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('contact-success').style.display = 'block';
+          document.getElementById('contact-error').style.display = 'none';
+          // BUG: Form doesn't reset after successful submission
+        } else {
+          document.getElementById('contact-error').textContent = 'Failed to send message. Please try again.';
+          document.getElementById('contact-error').style.display = 'block';
+        }
+      } catch (err) {
+        document.getElementById('contact-error').textContent = 'Network error. Please check your connection.';
+        document.getElementById('contact-error').style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

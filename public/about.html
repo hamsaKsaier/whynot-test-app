@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About - TaskFlow</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="logo">TaskFlow</a>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+      <a href="/login">Login</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="card">
+      <h1 style="font-size: 28px; margin-bottom: 16px;">About TaskFlow</h1>
+      <p style="font-size: 15px; color: #4b5563; line-height: 1.7; margin-bottom: 16px;">
+        TaskFlow is a modern project management tool designed to help teams collaborate more effectively.
+        Founded in 2022, we've grown to serve over 10,000 teams worldwide.
+      </p>
+      <p style="font-size: 15px; color: #4b5563; line-height: 1.7;">
+        Our mission is to make project management simple, intuitive, and accessible to teams of all sizes.
+      </p>
+    </div>
+
+    <!-- Team section -->
+    <div class="card">
+      <h2>Our Team</h2>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 16px;">
+        <div style="text-align: center;">
+          <!-- BUG: Broken image, no alt text -->
+          <img src="/images/team-ceo.jpg" width="100" height="100" style="border-radius:50%; margin-bottom: 8px;">
+          <h3 style="font-size: 15px;">Jane Smith</h3>
+          <p style="font-size: 12px; color: #6b7280;">CEO & Founder</p>
+        </div>
+        <div style="text-align: center;">
+          <img src="/images/team-cto.jpg" width="100" height="100" style="border-radius:50%; margin-bottom: 8px;">
+          <h3 style="font-size: 15px;">Alex Rivera</h3>
+          <p style="font-size: 12px; color: #6b7280;">CTO</p>
+        </div>
+        <div style="text-align: center;">
+          <img src="/images/team-design.jpg" width="100" height="100" style="border-radius:50%; margin-bottom: 8px;">
+          <h3 style="font-size: 15px;">Sam Lee</h3>
+          <p style="font-size: 12px; color: #6b7280;">Head of Design</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats section -->
+    <div class="card">
+      <h2>By the Numbers</h2>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px; text-align: center;">
+        <div>
+          <div style="font-size: 32px; font-weight: 700; color: #667eea;">10K+</div>
+          <div style="font-size: 13px; color: #6b7280;">Teams</div>
+        </div>
+        <div>
+          <div style="font-size: 32px; font-weight: 700; color: #667eea;">50M+</div>
+          <div style="font-size: 13px; color: #6b7280;">Tasks Created</div>
+        </div>
+        <div>
+          <div style="font-size: 32px; font-weight: 700; color: #667eea;">99.9%</div>
+          <div style="font-size: 13px; color: #6b7280;">Uptime</div>
+        </div>
+        <div>
+          <!-- BUG: This number is suspiciously specific and probably fake -->
+          <div style="font-size: 32px; font-weight: 700; color: #667eea;">142</div>
+          <div style="font-size: 13px; color: #6b7280;">Countries</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>&copy; 2023 TaskFlow. All rights reserved.</p>
+  </footer>
+</body>
+</html>

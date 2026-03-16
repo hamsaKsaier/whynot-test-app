@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - TaskFlow</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="logo">TaskFlow</a>
+    <div class="nav-links">
+      <a href="/dashboard">Dashboard</a>
+      <a href="/profile">Profile</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+      <!-- BUG: Logout button doesn't clear session properly -->
+      <a href="/" id="logout-btn" style="color: #fca5a5;">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- BUG: No auth check — dashboard accessible without login -->
+    <h1 style="margin-bottom: 24px; font-size: 28px;">My Tasks</h1>
+
+    <!-- Stats -->
+    <div class="card">
+      <div class="stats-bar">
+        <div class="stat">
+          <div class="stat-value" id="total-count">0</div>
+          <div class="stat-label">Total Tasks</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="completed-count">0</div>
+          <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="pending-count">0</div>
+          <div class="stat-label">Pending</div>
+        </div>
+        <div class="stat">
+          <!-- BUG: Completion rate shows NaN when no tasks -->
+          <div class="stat-value" id="completion-rate">0%</div>
+          <div class="stat-label">Completion Rate</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Task Form -->
+    <div class="card">
+      <h2>Add New Task</h2>
+      <form id="add-task-form" class="add-task-form" style="margin-top: 12px;">
+        <!-- BUG: No maxlength on input — can enter extremely long titles -->
+        <input type="text" id="new-task-title" placeholder="What needs to be done?">
+        <select id="new-task-priority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+        <!-- BUG: No label for select element -->
+        <input type="text" id="new-task-assignee" placeholder="Assignee" style="max-width: 120px;">
+        <button type="submit" class="btn" style="width: auto; white-space: nowrap;">Add Task</button>
+      </form>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="card" style="padding: 12px 24px;">
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <span style="font-size: 13px; color: #6b7280;">Filter:</span>
+        <!-- BUG: Filter buttons don't have active state -->
+        <button class="btn btn-sm btn-secondary" onclick="filterTasks('all')">All</button>
+        <button class="btn btn-sm btn-secondary" onclick="filterTasks('pending')">Pending</button>
+        <button class="btn btn-sm btn-secondary" onclick="filterTasks('completed')">Completed</button>
+        <button class="btn btn-sm btn-danger" onclick="filterTasks('high')">High Priority</button>
+
+        <!-- BUG: Search doesn't debounce — fires on every keystroke -->
+        <input type="text" id="search-input" placeholder="Search tasks..."
+               style="margin-left: auto; padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; width: 180px;"
+               oninput="searchTasks(this.value)">
+      </div>
+    </div>
+
+    <!-- Task List -->
+    <div class="card">
+      <div id="task-list">
+        <!-- Tasks loaded dynamically -->
+        <div style="text-align: center; padding: 20px; color: #9ca3af;">Loading tasks...</div>
+      </div>
+    </div>
+
+    <!-- BUG: "Load More" button exists but there's no pagination -->
+    <div style="text-align: center; margin-top: 16px;">
+      <button class="btn btn-secondary btn-sm" onclick="alert('All tasks are already loaded')">Load More</button>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast"></div>
+
+  <script>
+    let allTasks = [];
+    let currentFilter = 'all';
+
+    // Load tasks on page load
+    async function loadTasks() {
+      try {
+        const res = await fetch('/api/tasks');
+        allTasks = await res.json();
+        renderTasks(allTasks);
+        updateStats();
+      } catch (err) {
+        document.getElementById('task-list').innerHTML =
+          '<div style="text-align:center;padding:20px;color:#ef4444;">Failed to load tasks. Please refresh.</div>';
+      }
+    }
+
+    function renderTasks(tasks) {
+      const container = document.getElementById('task-list');
+
+      if (tasks.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">No tasks found. Create your first task above!</div>';
+        return;
+      }
+
+      container.innerHTML = tasks.map(task => `
+        <div class="task-item" data-id="${task.id}">
+          <input type="checkbox" class="checkbox" ${task.completed ? 'checked' : ''}
+                 onchange="toggleTask(${task.id}, this.checked)">
+          <span class="task-title ${task.completed ? 'completed' : ''}">${task.title}</span>
+          <div class="task-meta">
+            <span class="priority-badge priority-${task.priority}">${task.priority}</span>
+            ${task.assignee ? `<span class="assignee-badge">${task.assignee}</span>` : ''}
+            <button class="delete-btn" onclick="deleteTask(${task.id})">✕</button>
+          </div>
+        </div>
+      `).join('');
+      <!-- BUG: XSS vulnerability — task.title is rendered as raw HTML -->
+    }
+
+    function updateStats() {
+      const total = allTasks.length;
+      const completed = allTasks.filter(t => t.completed).length;
+      const pending = total - completed;
+      // BUG: NaN when total is 0
+      const rate = Math.round((completed / total) * 100);
+
+      document.getElementById('total-count').textContent = total;
+      document.getElementById('completed-count').textContent = completed;
+      document.getElementById('pending-count').textContent = pending;
+      document.getElementById('completion-rate').textContent = rate + '%';
+    }
+
+    async function toggleTask(id, completed) {
+      try {
+        await fetch(`/api/tasks/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ completed }),
+        });
+        // Update local state
+        const task = allTasks.find(t => t.id === id);
+        if (task) task.completed = completed;
+        renderTasks(getFilteredTasks());
+        updateStats();
+        showToast(completed ? 'Task completed!' : 'Task reopened', 'success');
+      } catch (err) {
+        showToast('Failed to update task', 'error');
+      }
+    }
+
+    async function deleteTask(id) {
+      // BUG: No confirmation dialog before delete
+      try {
+        await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+        allTasks = allTasks.filter(t => t.id !== id);
+        renderTasks(getFilteredTasks());
+        updateStats();
+        showToast('Task deleted', 'success');
+      } catch (err) {
+        showToast('Failed to delete task', 'error');
+      }
+    }
+
+    // Add task
+    document.getElementById('add-task-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const title = document.getElementById('new-task-title').value.trim();
+      const priority = document.getElementById('new-task-priority').value;
+      const assignee = document.getElementById('new-task-assignee').value.trim();
+
+      // BUG: Allows empty title
+      if (!title) {
+        // BUG: Only shows alert instead of inline validation
+        alert('Please enter a task title');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, priority, assignee }),
+        });
+        const task = await res.json();
+        allTasks.push(task);
+        renderTasks(getFilteredTasks());
+        updateStats();
+
+        // Clear form
+        document.getElementById('new-task-title').value = '';
+        document.getElementById('new-task-assignee').value = '';
+        showToast('Task added!', 'success');
+      } catch (err) {
+        showToast('Failed to add task', 'error');
+      }
+    });
+
+    // Filtering
+    function filterTasks(filter) {
+      currentFilter = filter;
+      renderTasks(getFilteredTasks());
+    }
+
+    function getFilteredTasks() {
+      switch (currentFilter) {
+        case 'pending': return allTasks.filter(t => !t.completed);
+        case 'completed': return allTasks.filter(t => t.completed);
+        case 'high': return allTasks.filter(t => t.priority === 'high');
+        default: return allTasks;
+      }
+    }
+
+    // BUG: Search function fires on every keystroke without debounce
+    function searchTasks(query) {
+      const q = query.toLowerCase();
+      const filtered = allTasks.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        (t.assignee && t.assignee.toLowerCase().includes(q))
+      );
+      renderTasks(filtered);
+    }
+
+    // Toast
+    function showToast(message, type) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+      // BUG: If multiple toasts fire, they overlap
+      setTimeout(() => { toast.classList.remove('show'); }, 3000);
+    }
+
+    // Logout handler
+    document.getElementById('logout-btn').addEventListener('click', function(e) {
+      // BUG: Only removes token, doesn't invalidate server-side session
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    });
+
+    // Init
+    loadTasks();
+  </script>
+</body>
+</html>
