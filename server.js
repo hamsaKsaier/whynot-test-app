@@ -17,6 +17,9 @@ let tasks = [
 ];
 let nextId = 6;
 
+// In-memory user store
+let users = [];
+
 // BUG: No CORS headers (will cause issues if accessed cross-origin)
 
 // API Routes
@@ -77,24 +80,45 @@ app.get('/contact', (req, res) => res.sendFile(path.join(__dirname, 'public', 'c
 // BUG: Login endpoint with hardcoded credentials and no rate limiting
 app.post('/api/login', (req, res) => {
   const { email, password } = req.body;
-  // BUG: Hardcoded credentials, no hashing
+
+  // Check hardcoded admin credentials
   if (email === 'admin@test.com' && password === 'password123') {
-    res.json({ success: true, token: 'fake-jwt-token-12345', user: { name: 'Admin', email } });
-  } else {
+    return res.json({ success: true, token: 'fake-jwt-token-12345', user: { name: 'Admin', email } });
+  }
+
+  // Check registered users
+  const user = users.find(u => u.email === email);
+  if (!user) {
     // BUG: Leaks whether email exists
     if (email === 'admin@test.com') {
-      res.status(401).json({ error: 'Invalid password' });
+      return res.status(401).json({ error: 'Invalid password' });
     } else {
-      res.status(401).json({ error: 'User not found' });
+      return res.status(401).json({ error: 'User not found' });
     }
   }
+
+  if (user.password !== password) {
+    return res.status(401).json({ error: 'Invalid password' });
+  }
+
+  res.json({ success: true, token: 'fake-jwt-token-12345', user: { name: user.name, email: user.email } });
 });
 
 app.post('/api/register', (req, res) => {
   const { name, email, password } = req.body;
   // BUG: No validation at all — accepts empty fields
-  // BUG: No duplicate email check
   // BUG: Password stored in plain text (conceptually)
+
+  // Check for duplicate email
+  const existingUser = users.find(u => u.email === email);
+  if (existingUser) {
+    return res.status(409).json({ success: false, error: 'Email already registered' });
+  }
+
+  // Store the new user in memory
+  const newUser = { name, email, password };
+  users.push(newUser);
+
   res.status(201).json({ success: true, message: 'Account created!', user: { name, email } });
 });
 
