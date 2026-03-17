@@ -20,15 +20,29 @@ let nextId = 6;
 // In-memory user store
 let users = [];
 
-// BUG: No CORS headers (will cause issues if accessed cross-origin)
+// Valid tokens store (maps token -> user info)
+const validTokens = new Set();
+validTokens.add('fake-jwt-token-12345');
+
+// Auth middleware — verifies Bearer token from Authorization header
+function requireAuth(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: No token provided' });
+  }
+  const token = authHeader.slice(7);
+  if (!validTokens.has(token)) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+  }
+  next();
+}
 
 // API Routes
-app.get('/api/tasks', (req, res) => {
-  // BUG: No pagination — returns everything
+app.get('/api/tasks', requireAuth, (req, res) => {
   res.json(tasks);
 });
 
-app.post('/api/tasks', (req, res) => {
+app.post('/api/tasks', requireAuth, (req, res) => {
   const { title, priority, assignee } = req.body;
 
   // BUG: No server-side validation — empty titles allowed
@@ -43,30 +57,23 @@ app.post('/api/tasks', (req, res) => {
   res.status(201).json(task);
 });
 
-app.put('/api/tasks/:id', (req, res) => {
-  // BUG: parseInt without radix, no NaN check
-  const id = parseInt(req.params.id);
+app.put('/api/tasks/:id', requireAuth, (req, res) => {
+  const id = parseInt(req.params.id, 10);
   const task = tasks.find(t => t.id === id);
 
   if (!task) {
-    // BUG: Returns 200 with error message instead of 404
-    return res.json({ error: 'Task not found' });
+    return res.status(404).json({ error: 'Task not found' });
   }
 
   Object.assign(task, req.body);
   res.json(task);
 });
 
-app.delete('/api/tasks/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  // BUG: No check if task exists before deleting
+app.delete('/api/tasks/:id', requireAuth, (req, res) => {
+  const id = parseInt(req.params.id, 10);
   tasks = tasks.filter(t => t.id !== id);
-  // BUG: Returns 200 with no body (should confirm deletion)
-  res.end();
+  res.status(200).json({ success: true });
 });
-
-// BUG: No 404 handler for unknown API routes
-// BUG: No global error handler
 
 // Serve pages
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
@@ -83,25 +90,33 @@ app.post('/api/login', (req, res) => {
 
   // Check hardcoded admin credentials
   if (email === 'admin@test.com' && password === 'password123') {
-    return res.json({ success: true, token: 'fake-jwt-token-12345', user: { name: 'Admin', email } });
+    const token = 'fake-jwt-token-12345';
+    validTokens.add(token);
+    return res.json({ success: true, token, user: { name: 'Admin', email } });
   }
 
   // Check registered users
   const user = users.find(u => u.email === email);
   if (!user) {
-    // BUG: Leaks whether email exists
-    if (email === 'admin@test.com') {
-      return res.status(401).json({ error: 'Invalid password' });
-    } else {
-      return res.status(401).json({ error: 'User not found' });
-    }
+    return res.status(401).json({ error: 'Invalid email or password' });
   }
 
   if (user.password !== password) {
-    return res.status(401).json({ error: 'Invalid password' });
+    return res.status(401).json({ error: 'Invalid email or password' });
   }
 
-  res.json({ success: true, token: 'fake-jwt-token-12345', user: { name: user.name, email: user.email } });
+  const token = 'fake-jwt-token-12345';
+  validTokens.add(token);
+  res.json({ success: true, token, user: { name: user.name, email: user.email } });
+});
+
+app.post('/api/logout', (req, res) => {
+  const authHeader = req.headers['authorization'];
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    validTokens.delete(token);
+  }
+  res.json({ success: true });
 });
 
 app.post('/api/register', (req, res) => {
