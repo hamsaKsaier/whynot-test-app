@@ -24,31 +24,26 @@
 
       <form id="login-form">
         <div class="form-group">
-          <!-- BUG: Label says "Email" but input type is "text" not "email" -->
           <label for="email">Email Address</label>
-          <input type="text" id="email" name="email" placeholder="you@example.com">
+          <input type="email" id="email" name="email" placeholder="you@example.com">
           <div class="error">Please enter a valid email address</div>
         </div>
 
         <div class="form-group">
           <label for="password">Password</label>
-          <!-- BUG: No minlength attribute, no password requirements shown -->
           <input type="password" id="password" name="password" placeholder="Enter your password">
           <div class="error">Password is required</div>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
           <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
-            <!-- BUG: Checkbox has no id/name — can't be submitted -->
-            <input type="checkbox"> Remember me
+            <input type="checkbox" id="remember" name="remember"> Remember me
           </label>
-          <!-- BUG: Forgot password link goes to a page that doesn't exist -->
           <a href="/forgot-password" style="font-size: 13px; color: #667eea;">Forgot password?</a>
         </div>
 
         <button type="submit" class="btn" id="login-btn">Log In</button>
 
-        <!-- BUG: Error message div exists but has poor positioning -->
         <div id="login-error" style="display:none; color: #ef4444; font-size: 13px; text-align: center; margin-top: 12px;"></div>
         <div id="login-success" style="display:none; color: #22c55e; font-size: 13px; text-align: center; margin-top: 12px;"></div>
       </form>
@@ -59,7 +54,6 @@
         </p>
       </div>
 
-      <!-- BUG: Social login buttons don't work -->
       <div style="margin-top: 20px;">
         <button class="btn btn-secondary" style="margin-bottom: 8px;" onclick="alert('Google login not implemented')">
           Continue with Google
@@ -75,16 +69,26 @@
     document.getElementById('login-form').addEventListener('submit', async function(e) {
       e.preventDefault();
 
-      const email = document.getElementById('email').value;
+      const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
 
-      // BUG: Client-side validation is minimal
+      document.getElementById('email').parentElement.classList.remove('has-error');
+      document.getElementById('password').parentElement.classList.remove('has-error');
+
       if (!email) {
         document.getElementById('email').parentElement.classList.add('has-error');
         return;
       }
 
-      // BUG: No loading state on button
+      if (!password) {
+        document.getElementById('password').parentElement.classList.add('has-error');
+        return;
+      }
+
+      const loginBtn = document.getElementById('login-btn');
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Logging in...';
+
       try {
         const res = await fetch('/api/login', {
           method: 'POST',
@@ -95,26 +99,25 @@
         const data = await res.json();
 
         if (data.success) {
-          // BUG: Stores token in localStorage (XSS-vulnerable)
           localStorage.setItem('token', data.token);
           localStorage.setItem('user', JSON.stringify(data.user));
           document.getElementById('login-success').textContent = 'Login successful! Redirecting...';
           document.getElementById('login-success').style.display = 'block';
           document.getElementById('login-error').style.display = 'none';
-          // BUG: 3-second delay before redirect (bad UX)
           setTimeout(() => {
             window.location.href = '/dashboard';
-          }, 3000);
+          }, 1000);
         } else {
-          // BUG: Shows raw server error message (leaks info about whether email exists)
-          document.getElementById('login-error').textContent = data.error;
+          document.getElementById('login-error').textContent = data.error || 'Invalid email or password.';
           document.getElementById('login-error').style.display = 'block';
           document.getElementById('login-success').style.display = 'none';
         }
       } catch (err) {
-        // BUG: Generic error message, no retry option
         document.getElementById('login-error').textContent = 'Something went wrong. Please try again.';
         document.getElementById('login-error').style.display = 'block';
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Log In';
       }
     });
   </script>
